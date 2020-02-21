@@ -31,14 +31,9 @@
 
 				<!-- Slide 1 -->
 				<section>
-					<h2 style="text-align: center;">Stretched-grid, CMake, and Continuous Integration Developments in GCHP</h2>
+					<h2 style="text-align: center;">How to use compute1</h2>
 					<h4 style="text-align: center; padding: 0; margin: 0;">Liam Bindle</h4>
-					<h4 style="text-align: center; padding: 0; margin: 0;">2020-01-29</h4>
-				</section>
-
-				<!-- Slide 2 -->
-				<section>
-					<h2 style="text-align: center;">Concepts and terminology</h2>
+					<h4 style="text-align: center; padding: 0; margin: 0;">2020-02-21</h4>
 				</section>
 
 				<section>
@@ -46,56 +41,30 @@
 				</section>
 
 				<section>
-					<section>
-						<h3>Concepts and terminology&mdash;don't over think it</h3>
-						<ul>
-							<li><strong>Nodes</strong>&mdash;there's a head-node and many exec-nodes</li>
-							<li><strong>Scheduler</strong>&mdash;LSF (IBM) is the scheduler; you use commands like <code>bsub</code></li>
-							<li><strong>Job/Job script</strong>&mdash;a bash script that gets run on an exec-node</li>
-							<li><strong>Interactive job</strong>&mdash;a job that gets you a terminal on an exec-node</li>
-							<li><strong>Batch job</strong>&mdash;a bash script that gets run on an exec-node</li>
-							<li><strong>Container</strong>&mdash;the preconfigured environment your job script runs in</li>
-						</ul>
-					</section>
-					<section>
-						<pre><code data-trim class="bash" data-noescape>
-							#!/usr/bin/env bash
-							#BSUB -q rvmartin
-							#BSUB -n 16
-							#BSUB -W 168:00
-							#BSUB -R "rusage[mem=40000] span[hosts=1]"
-							#BSUB -a 'docker(registry.gsc.wustl.edu/sleong/base-engineering)'
-							#BSUB -J "Example 1-year 2x2.5 GEOS-Chem simulation"
-							#BSUB -N
-							#BSUB -u liam.bindle@wustl.edu
-							#BSUB -o job-%J-output.txt
-
-							# Set up runtime environment
-							set -x                                      # Print executed commands
-							set -e                                      # Exit immediately if a command fails
-							ulimit -s unlimited                         # Make max stack size large
-							export OMP_STACKSIZE=500m                   # Make max stack size of threads large
-							export OMP_NUM_THREADS=$LSB_DJOB_NUMPROC    # Set num threads based on bsub's -n argument
-
-							# Execute simulation
-							cd /my-projects/geos-chem-example/geosfp_2x25_standard   # cd into run directory
-							./geos                                                   # Execute GEOS-Chem				
-						</code></pre>
-					</section>
+					<h3>Concepts and terminology&mdash;don't over think it</h3>
+					<ul>
+						<li><strong>Nodes</strong>&mdash;there's a head-node and many exec-nodes</li>
+						<li><strong>Scheduler</strong>&mdash;LSF (IBM) is the scheduler; you use commands like <code>bsub</code></li>
+						<li><strong>Job/Job script</strong>&mdash;a bash script that gets run on an exec-node</li>
+						<li><strong>Interactive job</strong>&mdash;a job that gets you a terminal on an exec-node</li>
+						<li><strong>Batch job</strong>&mdash;a bash script that gets run on an exec-node</li>
+						<li><strong>Container</strong>&mdash;the preconfigured environment your job script runs in</li>
+						<li><strong>Slot</strong>&mdash;a CPU core</li>
+						<li><strong>Host</strong>&mdash;used to refer to a physical computer/server</li>
+					</ul>
 				</section>
 
 				<section>
 					<h2 style="text-align: center;">What we're going to go over</h2>
 					<div style="text-align: center;">
 					<ol>
-						<li>How to get help</li>
-						<li>Logging in and some initial set up</li>
-						<li>The directory structure on the head-node</li>
-						<li>Using <code>bsub</code> to submit jobs</li>
+						<li>Getting help</li>
+						<li>Initial set up</li>
+						<li>Directory structure (on the head-node)</li>
+						<li>Submitting jobs with <code>bsub</code></li>
+						<li>Directory structure (on the exec-nodes)</li>
 						<li>Job scripts (interactive and batch)</li>
-						<li>The directory structure on exec-nodes</li>
-						<li>Other <code>b</code>-commands to interact with LSF</li>
-						<li>The magic that was done in the initial set up</li>
+						<li>Useful <code>b</code>-commands for interacting with the LSF</li>
 					</ol>
 				</div>
 				</section>
@@ -112,14 +81,20 @@
 
 				<section>
 					<section>
-						<h2>Logging in and initial set up</h2>
+						<h2>Initial set up</h2>
 						<ol>
-							<li>Modify <code>~/.ssh/config</code></li>
-							<li>Log in to compute1 with <code>ssh compute1</code></li>
-							<li>Run a set up script I wrote</li>
+							<li>Modify <code>~/.ssh/config</code> on your localhost to make logging in easy</li>
+							<li>Run a set up script on the head-node to get
+								<ul>
+									<li><code>~/lsf-conf.rc</code> &mdash; RC file with LSF environment variables</li>
+									<li><code>~/interactive.bsub</code> &mdash; an interactive job script</li>
+								</ul>
+							</li>
+							<li>Log out and then log back in</li>
 						</ol>
 					</section>
 					<section>
+						<h3 style="margin-bottom: 2em;">1. Set up to make logging in easy</h3>
 						<div>
 							<p>Edit <code>~/.ssh/config</code></p>
 							<pre><code data-trim class="shell" data-noescape>
@@ -138,90 +113,131 @@
 						</div>
 
 						<div class="fragment fade-in">
-							<p>Log in to compute1</p>
+							<p>Log in to compute1 (make sure you're on the WUSM-secure network)</p>
 							<pre><code data-trim class="shell" data-noescape>
 								$ ssh compute1
+
+								You are connecting to RIS Compute services. 
+								Membership in compute-* AD group is required.
+								Users are responsible for ensuring that they act in accordance 
+								with policy applicable to Washington University St. Louis.
+	
+	
+								Last login: Thu Feb 20 13:34:38 2020 from workstation.wusm-wifi.wucon.wustl.edu
+								[liam.bindle@compute1-client-1 ~]$
+							</code></pre>
+						</div>
+					</section>
+					<section>
+						<h3 style="margin-bottom: 2em;">2. Run my set up script</h3>
+
+						<p style="margin-bottom: 2em;">The script is going to create <code>~/lsf-conf.rc</code> and <code>~/interactive.bsub</code></p>
+
+						<div class="fragment fade-in">
+							Download <code>set-up.sh</code> (copy-paste the <code>wget</code> command below)
+							<pre style="font-size: 7pt;"><code data-trim class="plaintext" data-noescape>
+								[liam.bindle@compute1-client-1 ~]$ wget -q https://raw.githubusercontent.com/Atmospheric-Composition-Analysis-Group/compute1/master/set-up.sh
 							</code></pre>
 						</div>
 
 						<div class="fragment fade-in">
-							<p>Run this snippet to set some things up</p>
-							<pre><code data-trim class="bash" data-noescape>
-								cd ~
-								wget -qO- https://github.com/Atmospheric-Composition-Analysis-Group/compute1/archive/master.tar.gz | tar -xzf -
-								mv compute1-master compute1
-								echo "source $HOME/compute1/head-node.rc" >> $HOME/.bashrc
+							Run <code>set-up.sh</code>. Replace "lbindle" with your project directory's name
+							<pre><code data-trim class="plaintext" data-noescape>
+								[liam.bindle@compute1-client-1 ~]$ bash ./set-up.sh lbindle
 							</code></pre>
-						</div>
+						</div>						
+					</section>
 
-						<div class="fragment fade-in">
-							<p>Log out</p>
-							<pre><code data-trim class="shell" data-noescape>
-								[liam.bindle@compute1-client-1 ~]$ exit
-							</code></pre>
-						</div>
-						<div class="fragment fade-in">
-							<p>... and then back in</p>
-							<pre><code data-trim class="shell" data-noescape>
-								$ ssh compute1
-							</code></pre>
-						</div>
+					<section>
+						<h3 style="margin-bottom: 2em;">3. Log out and then log back in</h3>
+
+						<p>Log out</p>
+						<pre><code data-trim class="shell" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ exit
+						</code></pre>
+						<p><br>and then log back in</p>
+						<pre><code data-trim class="shell" data-noescape>
+							$ ssh compute1
+
+							You are connecting to RIS Compute services. 
+							Membership in compute-* AD group is required.
+							Users are responsible for ensuring that they act in accordance 
+							with policy applicable to Washington University St. Louis.
+
+
+							Last login: Thu Feb 20 13:34:38 2020 from workstation.wusm-wifi.wucon.wustl.edu
+							[liam.bindle@compute1-client-1 ~]$
+						</code></pre>
 					</section>
 				</section>
 
 				<section>
-					<section>
-						<h2>Directories on the head-node</h2>
-						<div style="font-size: 11pt;">
-							<ul>
-								<li><code>/home/IDC-ID-74944</code> &mdash; my home directory</li>
-								<li><code>/home/IDC-ID-74944/compute1</code> &mdash; some environment and jobs scripts to help get you started </li>
-								<li><code>/storage1/fs1/rvmartin/Active</code> &mdash; our group's root directory</li>
-								<li><code>/storage1/fs1/rvmartin/Active/Shared</code> &mdash; a shared read/write directory</li>
-								<li><code>/storage1/fs1/rvmartin/Active/bindle</code> &mdash; my personal projects directory</li>
-								<li><code>/storage1/fs1/rvmartin/Active/GEOS-Chem-shared/ExtData</code> &mdash; GEOS-Chem's ExtData directory</li>
-							</ul>
-						</div>
-					</section>
-					<section>
-						Create these links
-						<pre><code data-trim class="shell" data-noescape>
-							[liam.bindle@compute1-client-1 ~]$ ln -s /storage1/fs1/rvmartin/Active/bindle my-projects
-							[liam.bindle@compute1-client-1 ~]$ ln -s /storage1/fs1/rvmartin/Active/Shared Shared
+					<h2>Directories on the head-node</h2>
+					<div style="font-size: 11pt;">
+						<ul>
+							<li><code>/storage1/fs1/rvmartin/Active</code> &mdash; our group's root directory</li>
+							<li><code>/storage1/fs1/rvmartin/Active/GEOS-Chem-shared/ExtData</code> &mdash; GEOS-Chem's ExtData directory</li>
+							<br>
+							<li><code>/storage1/fs1/rvmartin/Active/Shared</code> &mdash; a shared read/write directory
+								<ul>
+									<li><code>~/Shared</code> is a link to this directory</li>
+								</ul>
+							</li>
+							<li><code>/storage1/fs1/rvmartin/Active/lbindle</code> &mdash; my personal projects directory
+								<ul>
+									<li><code>~/my-projects</code> is a link to this directory</li>
+								</ul>
+							</li>
+						</ul>
+					</div>
+				</section>
+				
+				<section>
+					<h2>Launching jobs with <code>bsub</code></h2>
+					<ul>
+						<li>Jobs are submitted with the <code>bsub</code> command</li>
+						<li>Options can be specified on the command-line or in your job script</li>
+						<li>There are lots of options so it's <strong>alot</strong> easier to do it in your job script</li>
+					</ul>
+					
+					<div class="fragment fade-in">
+						<p><br><br>Try launching <code>~/interactive.bsub</code></p>
+						<pre><code data-trim class="bash" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ bsub < interactive.bsub
 						</code></pre>
-					</section>
+						<p style="font-size: 14pt;"><strong>Note</strong>: You should launch <code>~/interactive.bsub</code> from your home directory (see next slide)</p>
+					</div>
 				</section>
 				
 				<section>
 					<section>
-						<h2>Launching jobs with <code>bsub</code></h2>
-						<ul>
-							<li>Jobs are submitted with the <code>bsub</code> command</li>
-							<li>Options can be specified on the command-line or in your job script</li>
-							<li>There are lots of options so it's <strong>alot</strong> easier to do it in your job script</li>
-						</ul>
-					</section>
-					<section>
-						<p>Try launching <code>~/compute1/interactive.sh</code></p>
-						<pre><code data-trim class="bash" data-noescape>
-							[liam.bindle@compute1-client-1 ~]$ bsub < compute1/interactive.sh
-						</code></pre>
-						<div class="fragment fade-in" style="text-align: center;">
-							<p style="display: inline-block; text-align: left;">We'll look at the contents of jobs scritps, but first lets look <br>at the directory structure on exec-nodes</p>
+						<h2>Directories on the exec-nodes</h2>
+						<div>
+							<ul>
+								<li><code>/my-projects</code> &mdash; my personal projects directory</li>
+								<li><code>/Shared</code> &mdash; the shared read/write directory</li>
+								<li><code>/ExtData</code> &mdash; GEOS-Chem's ExtData directory</li>
+								<li class="fragment fade-in"><code>$HOME</code> &mdash; ???? &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; ¯\_(ツ)_/¯
+									<ul>
+										<li style="font-size: 14pt;">It's not the same as <code>$HOME</code> on the head-node unless your <br>job was launched from the home directory</li>
+										<li style="font-size: 14pt;">Interactive programs oftentimes save data to hidden files in your <br>home directory (hence why you should <br>launch <code>~/interactive.bsub</code> from your home directory) </li>
+									</ul>
+								</li>
+							</ul>
 						</div>
 					</section>
-				</section>
-
-				<section>
-					<h2>Directories on the exec-nodes</h2>
-					<div style="font-size: 11pt;">
-						<ul>
-							<li><code>/my-projects</code> &mdash; my personal projects directory</li>
-							<li><code>/ExtData</code> &mdash; the shared read/write directory</li>
-							<li><code>/ExtData</code> &mdash; GEOS-Chem's ExtData directory</li>
-							<li><code>/home/IDC-ID-74944</code> &mdash; my home directory (same directory as head-node)</li>
-						</ul>
-					</div>
+					<section>
+						<h2>Directory mappings: <span style="color: green;">exec-nodes</span> &mdash; <span style="color: orange;">head-node</span></h2>
+						<div style="font-size: 11pt;">
+							<ul>
+								<li><code style="color: green;">/Shared</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/Shared</code></li>
+								<li><code style="color: green;">/my-projects</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/bindle</code></li>
+								<li><code style="color: green;">/ExtData</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/GEOS-Chem-shared/ExtData</code></li>
+							</ul>
+						</div>
+						<p class="fragment fade-in"><br>This is configured in <code>~/lsf-conf.rc</code></p>
+						<p class="fragment fade-in"><br>Back to job scripts...</p>
+					</section>
 				</section>
 
 				<section>
@@ -233,11 +249,11 @@
 						#BSUB -R "rusage[mem=40000] span[hosts=1]"
 						#BSUB -q rvmartin-interactive
 						#BSUB -a 'docker(registry.gsc.wustl.edu/sleong/base-engineering)'
-
-						source $HOME/compute1/compute-node.rc
+						
 						cd /my-projects
 						zsh
 					</code></pre>
+					<p style="padding-top: 2em;">See <code>bsub</code> options' documentation <a href="https://www.ibm.com/support/knowledgecenter/SSWRJV_10.1.0/lsf_command_ref/bsub.heading_options.1.html">here</a></p>
 				</section>
 
 				<section>
@@ -265,11 +281,156 @@
 						cd /my-projects/geos-chem-example/geosfp_2x25_standard   # cd into run directory
 						./geos                                                   # Execute GEOS-Chem
 					</code></pre>
+					<p style="padding-top: 2em;">See <code>bsub</code> options' documentation <a href="https://www.ibm.com/support/knowledgecenter/SSWRJV_10.1.0/lsf_command_ref/bsub.heading_options.1.html">here</a></p>
+				</section>
+
+				<section>
+					<section>
+						<h2>Some useful <code>b</code>-commands</h2>
+					</section>
+					<section>
+						<h3><code>bjobs</code>: list jobs</h3>
+						<pre><code data-trim class="plaintext" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ bjobs
+							JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+							59060   liam.bi RUN   general-in compute1-cl 8*compute1- *#zsh;bash Feb 20 09:56
+						</code></pre>
+						<p>or</p>
+						<pre><code data-trim class="plaintext" data-noescape>
+						[liam.bindle@compute1-client-1 ~]$ bjobs -l 15691
+						Job 15691, User liam.bindle, Project default, Application docker1, Job 
+											Group /liam.bindle/default, User Group <compute-rvmartin
+											>, Status PEND, Queue rvmartin-interactive, Interactiv
+											e pseudo-terminal shell mode, Command <#!/bin/bash;#BSUB -
+											Is;#BSUB -n 24;#BSUB -R "rusage[mem=200000] span[hosts=1]"
+											;#BSUB -q rvmartin-interactive;#j#BSUB -a 'docker(liambind
+											le/mypyenv)';##BSUB -a 'docker(registry.gsc.wustl.edu/sleo
+											ng/base-engineering)';#BSUB -a 'docker(registry.gsc.wustl.
+											edu/sleong/base-engineering-gcc)'; #source /init.rc;source
+											$HOME/compute1/compute-node.rc;cd /my-projects;zsh;#bash>
+											, Esub registry.gsc.wustl.edu/sleong/base-engineer
+											ing-gcc)>
+						Wed Jan 15 08:29:47: Submitted from host compute1-client-1.ris.wustl.edu>, CWD
+											$HOME, 24 Task(s), Requested Resources <rusage[mem=2000
+											00] span[hosts=1]>;
+						PENDING REASONS:
+						Not enough job slot(s): 25 hosts;
+
+						RUNLIMIT                
+						1440.0 min
+
+						MEMLIMIT
+						195.3 G 
+
+						SCHEDULING PARAMETERS:
+								r15s   r1m  r15m   ut      pg    io   ls    it    tmp    swp    mem
+						loadSched   -     -     -     -       -     -    -     -     -      -      -  
+						loadStop    -     -     -     -       -     -    -     -     -      -      -  
+
+						RESOURCE REQUIREMENT DETAILS:
+						Combined: select[(defined(docker)) && (type == any)] order[r15s:pg] rusage[mem
+											=200000.00] span[hosts=1]
+						Effective: -
+						</code></pre>
+					</section>
+					<section>
+						<h3><code>bkill</code>: kill jobs</h3>
+						<pre><code data-trim class="plaintext" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ bkill 59060
+							Job <59060> is being terminated
+						</code></pre>
+					</section>
+
+					<section>
+						<h3><code>bhosts</code>: see node activity</h3>
+						<pre><code data-trim class="plaintext" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ bhosts rvmartin
+							HOST_NAME          STATUS       JL/U    MAX  NJOBS    RUN  SSUSP  USUSP    RSV 
+							compute1-exec-10.r ok              -     36      0      0      0      0      0
+							compute1-exec-11.r ok              -     36      0      0      0      0      0
+							compute1-exec-12.r ok              -     36      0      0      0      0      0
+							compute1-exec-13.r ok              -     36      0      0      0      0      0
+							compute1-exec-14.r ok              -     36      0      0      0      0      0
+							compute1-exec-15.r ok              -     36      0      0      0      0      0
+							compute1-exec-16.r ok              -     36      0      0      0      0      0
+							compute1-exec-17.r ok              -     36      0      0      0      0      0
+							compute1-exec-18.r ok              -     36      0      0      0      0      0
+							compute1-exec-19.r ok              -     36      0      0      0      0      0
+							compute1-exec-20.r ok              -     36      0      0      0      0      0
+							compute1-exec-21.r ok              -     36      0      0      0      0      0
+							compute1-exec-22.r closed          -     36      0      0      0      0      0
+							compute1-exec-23.r ok              -     36      0      0      0      0      0
+							compute1-exec-24.r ok              -     36      0      0      0      0      0
+							compute1-exec-25.r ok              -     36      0      0      0      0      0
+							compute1-exec-26.r ok              -     36      0      0      0      0      0
+							compute1-exec-27.r ok              -     36      0      0      0      0      0
+							compute1-exec-28.r ok              -     36      0      0      0      0      0
+							compute1-exec-29.r ok              -     36      0      0      0      0      0
+							compute1-exec-3.ri closed          -      1      0      0      0      0      0
+							compute1-exec-30.r ok              -     36      0      0      0      0      0
+							compute1-exec-4.ri ok              -     36      0      0      0      0      0
+							compute1-exec-5.ri ok              -     36      0      0      0      0      0
+							compute1-exec-6.ri ok              -     36      0      0      0      0      0
+							compute1-exec-7.ri ok              -     36      0      0      0      0      0
+							compute1-exec-8.ri closed          -     36      0      0      0      0      0
+							compute1-exec-9.ri ok              -     36      0      0      0      0      0
+						</code></pre>
+					</section>
+
+					<section>
+						<h3><code>bqueues</code>: see queue activity</h3>
+						<pre><code data-trim class="plaintext" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ bqueues
+							QUEUE_NAME      PRIO STATUS          MAX JL/U JL/P JL/H NJOBS  PEND   RUN  SUSP 
+							datatransfer     10  Open:Active       -    -    -    -     0     0     0     0
+							general          10  Open:Active       -    -    -    -  3984   111  3873     0
+							general-interac  10  Open:Active       -    -    -    -     3     0     3     0
+							fitzp            10  Open:Active       -    -    -    -     0     0     0     0
+							fitzp-interacti  10  Open:Active       -    -    -    -     0     0     0     0
+							pathology        10  Open:Active       -    -    -    -     0     0     0     0
+							pathology-inter  10  Open:Active       -    -    -    -     0     0     0     0
+							rvmartin         10  Open:Active       -    -    -    -     0     0     0     0
+							rvmartin-intera  10  Open:Active       -    -    -    -     0     0     0     0
+							tychele          10  Open:Active       -    -    -    -     0     0     0     0
+							tychele-interac  10  Open:Active       -    -    -    -     0     0     0     0
+							irahall          10  Open:Active       -    -    -    -     0     0     0     0
+							irahall-interac  10  Open:Active       -    -    -    -    16     0    16     0
+							timley           10  Open:Active       -    -    -    -     0     0     0     0
+							timley-interact  10  Open:Active       -    -    -    -     0     0     0     0
+						</code></pre>
+					</section>
+
+					<section>
+						<h3><code>bgadd</code> and <code>bjgroup</code>: job groups</h3>
+						<p>Create a group</p>
+						<pre><code data-trim class="plaintext" data-noescape>
+							[liam.bindle@compute1-client-1 ~]$ bgadd -L 30 /liam.bindle/test_group
+							Job group </liam.bindle/test_group> was added.
+						</code></pre>
+						<div class="fragment fade-in">
+							<p><br>Use <code>bsub</code>'s <code>-g</code> option to put your job in that group:</p>
+							<pre><code data-trim class="plaintext" data-noescape>
+								[liam.bindle@compute1-client-1 ~]$ bsub -g /liam.bindle/test_group < interactive.bsub
+							</code></pre>
+							<p>or add this line to your job script</p>
+							<pre><code data-trim class="bash" data-noescape>
+								#BSUB -g /liam.bindle/test_group
+							</code></pre>
+						</div>
+						<div class="fragment fade-in">
+							<p><br>Print group summary:</p>
+							<pre><code data-trim class="bash" data-noescape>
+								[liam.bindle@compute1-client-1 ~]$ bjgroup -s /liam.bindle/test_group
+								GROUP_NAME            NJOBS   PEND    RUN    SSUSP  USUSP  FINISH  SLA        JLIMIT      OWNER
+								/liam.bindle/test_group      0      0      0        0      0       0  ()           0/30 liam.bindle
+							</code></pre>
+						</div>
+					</section>
 				</section>
 
 				<!-- Slide 10 -->
 				<section>
-					<h2 style="text-align: center;">Thanks!</h2>
+					<h2 style="text-align: center;">Questions</h2>
 				</section>
 
 			</div>
