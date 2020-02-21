@@ -31,7 +31,7 @@
 
 				<!-- Slide 1 -->
 				<section>
-					<h2 style="text-align: center;">How to use compute1</h2>
+					<h2 style="text-align: center;">Compute1 Tutorial</h2>
 					<h4 style="text-align: center; padding: 0; margin: 0;">Liam Bindle</h4>
 					<h4 style="text-align: center; padding: 0; margin: 0;">2020-02-21</h4>
 				</section>
@@ -45,7 +45,7 @@
 					<ul>
 						<li><strong>Nodes</strong>&mdash;there's a head-node and many exec-nodes</li>
 						<li><strong>Scheduler</strong>&mdash;LSF (IBM) is the scheduler; you use commands like <code>bsub</code></li>
-						<li><strong>Job/Job script</strong>&mdash;a bash script that gets run on an exec-node</li>
+						<li><strong>Job/Job script</strong>&mdash;a bash script that gets run on an exec-node; special comments configure the job</li>
 						<li><strong>Interactive job</strong>&mdash;a job that gets you a terminal on an exec-node</li>
 						<li><strong>Batch job</strong>&mdash;a bash script that gets run on an exec-node</li>
 						<li><strong>Container</strong>&mdash;the preconfigured environment your job script runs in</li>
@@ -62,9 +62,9 @@
 						<li>Initial set up</li>
 						<li>Directory structure (on the head-node)</li>
 						<li>Submitting jobs with <code>bsub</code></li>
-						<li>Directory structure (on the exec-nodes)</li>
+						<li>Directory structure (on exec-nodes)</li>
 						<li>Job scripts (interactive and batch)</li>
-						<li>Useful <code>b</code>-commands for interacting with the LSF</li>
+						<li>Useful <code>b</code>-commands for interacting with LSF</li>
 					</ol>
 				</div>
 				</section>
@@ -74,7 +74,7 @@
 					<ul>
 						<li>RIS User Manual: <a href="https://confluence.ris.wustl.edu/display/RSUM/User+Manual"><br>https://confluence.ris.wustl.edu/display/RSUM/User+Manual</a></li>
 						<li>Submit a ticket with RIS: <a href="https://jira.ris.wustl.edu/servicedesk/customer/portal/1/group/22"><br>https://jira.ris.wustl.edu/servicedesk/customer/portal/1/group/22</a></li>
-						<li>LSF Command Reference: <a href="https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_command_ref/bsub.1.html"><br><small>https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_command_ref/bsub.1.html</small></a></li>
+						<li>LSF Command Reference: <a href="https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_kc_cmd_ref.html"><br><small>https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_kc_cmd_ref.html</small></a></li>
 						<li><code>bsub</code> options (in LSF Command Reference): <a href="https://www.ibm.com/support/knowledgecenter/SSWRJV_10.1.0/lsf_command_ref/bsub.heading_options.1.html"><br><small>https://www.ibm.com/support/knowledgecenter/SSWRJV_10.1.0/lsf_command_ref/bsub.heading_options.1.html</small></a></li>
 					</ul>
 				</section>
@@ -107,7 +107,7 @@
 							<pre><code data-trim class="plaintext" data-noescape>
 								Host compute1
 									HostName compute1-client-1.ris.wustl.edu
-									User liam.bindle
+									User your.wustl.key
 							
 							</code></pre>
 						</div>
@@ -217,7 +217,7 @@
 								<li><code>/my-projects</code> &mdash; my personal projects directory</li>
 								<li><code>/Shared</code> &mdash; the shared read/write directory</li>
 								<li><code>/ExtData</code> &mdash; GEOS-Chem's ExtData directory</li>
-								<li class="fragment fade-in"><code>$HOME</code> &mdash; ???? &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; ¯\_(ツ)_/¯
+								<li><code>$HOME</code> &mdash; ???? &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; ¯\_(ツ)_/¯
 									<ul>
 										<li style="font-size: 14pt;">It's not the same as <code>$HOME</code> on the head-node unless your <br>job was launched from the home directory</li>
 										<li style="font-size: 14pt;">Interactive programs oftentimes save data to hidden files in your <br>home directory (hence why you should <br>launch <code>~/interactive.bsub</code> from your home directory) </li>
@@ -230,8 +230,8 @@
 						<h2>Directory mappings: <span style="color: green;">exec-nodes</span> &mdash; <span style="color: orange;">head-node</span></h2>
 						<div style="font-size: 11pt;">
 							<ul>
-								<li><code style="color: green;">/Shared</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/Shared</code></li>
 								<li><code style="color: green;">/my-projects</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/bindle</code></li>
+								<li><code style="color: green;">/Shared</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/Shared</code></li>
 								<li><code style="color: green;">/ExtData</code> &mdash; <code style="color: orange;">/storage1/fs1/rvmartin/Active/GEOS-Chem-shared/ExtData</code></li>
 							</ul>
 						</div>
@@ -239,7 +239,7 @@
 						<p class="fragment fade-in"><br>Back to job scripts...</p>
 					</section>
 				</section>
-
+				
 				<section>
 					<h2>Job scripts: an interactive job</h2>
 					<pre><code data-trim class="bash" data-noescape>
@@ -259,7 +259,7 @@
 				<section>
 					<h2>Job scripts: a batch job</h2>
 					<pre><code data-trim class="bash" data-noescape>
-						#!/usr/bin/env bash
+						#!/bin/bash
 						#BSUB -q rvmartin
 						#BSUB -n 16
 						#BSUB -W 168:00
@@ -287,6 +287,7 @@
 				<section>
 					<section>
 						<h2>Some useful <code>b</code>-commands</h2>
+						<p style="margin-top: 3em;">Documentation for all these commands is in the <a href="https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_kc_cmd_ref.html">LSF Command Reference</a></p>
 					</section>
 					<section>
 						<h3><code>bjobs</code>: list jobs</h3>
@@ -426,6 +427,22 @@
 							</code></pre>
 						</div>
 					</section>
+				</section>
+
+				<section>
+					<h2>In my experience...</h2>
+
+					<ul style="font-size: 12pt; margin-top: 2em;">
+						<li>File permissions are sometimes weird</li>
+						<li>Resizing your terminal window in interactive jobs kills the connection</li>
+						<li>The <code>$HOME</code> directory quirk</li>
+						<li>Submitting tickets is painful...but just do it</li>
+					</ul>
+
+					<div style="font-size: 12pt; text-align: center; display: inline-block; margin-top: 3em;">
+						<p style="text-align: left;">There are some quirks, but <strong>you should start using compute1</strong> rather than <br>stetson, Graham, or ACENET (our access is going to be cutoff in the near future).</p>
+						<p style="margin-top: 2em; text-align: left;">Shin Leong (<a href="mailto:sleong@wustl.edu">sleong@wustl.edu</a>) is RIS's point contact for our group. He is really helpful <br>and you can message him on Slack (@Shin).</p>
+					</div>
 				</section>
 
 				<!-- Slide 10 -->
